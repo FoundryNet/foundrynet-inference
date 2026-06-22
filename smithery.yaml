@@ -1,0 +1,25 @@
+# FoundryNet Inference — already deployed remote MCP server (Streamable HTTP).
+# Remote servers register on Smithery via the URL form at https://smithery.ai/new
+# (no build step). This file documents the server + discovery keywords.
+name: foundrynet-inference
+displayName: FoundryNet Inference
+description: x402 LLM proxy + data-enriched analysis (17 sources) + predictive (IoT) intelligence.
+remote:
+  url: https://foundrynet-inference-production.up.railway.app/mcp
+  transport: streamable-http
+homepage: https://foundrynet.io
+tools:
+  - chat
+  - analyze
+  - predict
+  - infer
+keywords:
+  - llm-proxy
+  - inference
+  - data-enrichment
+  - predictive-intelligence
+  - timesfm
+  - iot-inference
+  - machine-learning
+  - company-analysis
+  - equipment-prediction
