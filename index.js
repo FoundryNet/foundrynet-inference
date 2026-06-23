@@ -17,6 +17,13 @@ const { mountMcp, TOOLS } = require("./lib/mcp");
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 
+// Point every response (esp. the 402 challenges) at the OpenAPI spec so x402scan
+// can auto-discover it. RFC 8288 Link header, rel="describedby".
+app.use((req, res, next) => {
+  res.set("Link", '</openapi.json>; rel="describedby"');
+  next();
+});
+
 const ROUTES = {
   chat: { price: 0.02, desc: "LLM inference proxy (Claude)" },
   analyze: { price: 0.25, desc: "Data-enriched analysis across the FoundryNet network + LLM" },
@@ -52,6 +59,107 @@ app.get("/x402/:route", (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   return res.status(402).json(paymentRequired(r, ROUTES[r].price, ROUTES[r].desc));
 });
+
+// ── OpenAPI discovery doc (x402scan requires a spec at a discoverable URL) ────
+// Schemas mirror lib/handlers exactly: chat→messages, analyze→query,
+// predict→{values,threshold} (canonical_field/oem/direction optional), infer→telemetry.
+function openApiDoc() {
+  return {
+    openapi: "3.1.0",
+    info: {
+      title: "FoundryNet Inference",
+      description: "LLM inference proxy + data-enriched analysis + predictive intelligence. 17 data sources. MINT-attested outputs. x402-gated (Solana/Base USDC); an fnet_ Forge key bypasses.",
+      version: "1.0.0",
+    },
+    servers: [{ url: PUBLIC_URL }],
+    paths: {
+      "/v1/chat": {
+        post: {
+          operationId: "chat",
+          summary: "LLM inference proxy (Claude)",
+          "x-x402-price": "$0.02",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: {
+              type: "object",
+              properties: {
+                model: { type: "string", default: "claude-sonnet-4-6", description: "LLM model to use" },
+                messages: { type: "array", description: "Chat messages array",
+                  items: { type: "object", properties: { role: { type: "string" }, content: { type: "string" } }, required: ["role", "content"] } },
+                system: { type: "string", description: "Optional system prompt" },
+                max_tokens: { type: "integer", description: "Optional max output tokens" },
+              },
+              required: ["messages"],
+            } } },
+          },
+          responses: { "200": { description: "LLM response" }, "402": { description: "Payment required — x402 challenge" } },
+        },
+      },
+      "/v1/analyze": {
+        post: {
+          operationId: "analyze",
+          summary: "Data-enriched analysis across the FoundryNet network + LLM synthesis",
+          "x-x402-price": "$0.25",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: {
+              type: "object",
+              properties: {
+                query: { type: "string", description: "Analysis query, e.g. 'NVDA risk profile'" },
+                model: { type: "string", description: "Optional synthesis model" },
+              },
+              required: ["query"],
+            } } },
+          },
+          responses: { "200": { description: "Scored analysis with key findings" }, "402": { description: "Payment required — x402 challenge" } },
+        },
+      },
+      "/v1/predict": {
+        post: {
+          operationId: "predict",
+          summary: "TimesFM predictive intelligence — threshold-breach forecasting",
+          "x-x402-price": "$0.10",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: {
+              type: "object",
+              properties: {
+                values: { type: "array", items: { type: "number" }, description: "Time series values (16+ recommended for a reliable forecast)" },
+                threshold: { type: "number", description: "Breach threshold" },
+                canonical_field: { type: "string", description: "Optional field name (e.g. spindle_load_pct); with `oem` it enables canonical normalization" },
+                oem: { type: "string", description: "Optional equipment manufacturer (enables field normalization)" },
+                direction: { type: "string", enum: ["above", "below"], default: "above" },
+              },
+              required: ["values", "threshold"],
+            } } },
+          },
+          responses: { "200": { description: "Breach prediction + NL recommendation + MINT attestation" }, "402": { description: "Payment required — x402 challenge" } },
+        },
+      },
+      "/v1/infer": {
+        post: {
+          operationId: "infer",
+          summary: "IoT telemetry inference — normalize + forecast + anomaly detection",
+          "x-x402-price": "$0.10",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: {
+              type: "object",
+              properties: {
+                telemetry: { type: "object", description: "Key-value sensor readings; values may be scalars or numeric arrays (a 12+ point array enables forecasting)", additionalProperties: true },
+                oem: { type: "string", description: "Equipment manufacturer (optional; enables normalization)" },
+              },
+              required: ["telemetry"],
+            } } },
+          },
+          responses: { "200": { description: "Normalized telemetry with forecasts and anomaly flags" }, "402": { description: "Payment required — x402 challenge" } },
+        },
+      },
+    },
+  };
+}
+app.get("/openapi.json", (req, res) =>
+  res.set("Access-Control-Allow-Origin", "*").set("Cache-Control", "public, max-age=300").json(openApiDoc()));
 
 // ── REST tiers (thin wrappers over lib/handlers; x402-gated) ─────────────────
 function restRoute(name, fn) {
