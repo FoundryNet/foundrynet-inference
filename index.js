@@ -2,7 +2,7 @@
 /**
  * FoundryNet Inference — x402-gated revenue engine.
  *   Tier 1  POST /v1/chat     $0.02  generic LLM proxy (Claude)
- *   Tier 2  POST /v1/analyze  $0.25  data-enriched analysis (17 sources + LLM)
+ *   Tier 2  POST /v1/analyze  $0.25  data-enriched analysis (19 sources: 17 MCP servers + web search + scrape, + LLM)
  *   Tier 3  POST /v1/predict  $0.10  TimesFM breach forecast + NL recommendation
  *           POST /v1/infer    $0.10  IoT telemetry → normalize + forecast + anomalies
  *
@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 
 const ROUTES = {
   chat: { price: 0.02, desc: "LLM inference proxy (Claude)" },
-  analyze: { price: 0.25, desc: "Data-enriched analysis across the FoundryNet network + LLM" },
+  analyze: { price: 0.25, desc: "Data-enriched analysis across the FoundryNet network (17 servers + live web search + page extraction) + LLM" },
   predict: { price: 0.10, desc: "Predictive telemetry — TimesFM breach forecast + NL recommendation" },
   infer: { price: 0.10, desc: "IoT sensor inference — normalize + forecast + anomaly flags" },
 };
@@ -68,8 +68,9 @@ function openApiDoc() {
     openapi: "3.1.0",
     info: {
       title: "FoundryNet Inference",
-      description: "LLM inference proxy + data-enriched analysis + predictive intelligence. 17 data sources. MINT-attested outputs. x402-gated (Solana/Base USDC); an fnet_ Forge key bypasses.",
+      description: "LLM inference proxy + data-enriched analysis + predictive intelligence. 19 data sources (17 MCP servers + live web search + page extraction). MINT-attested outputs. x402-gated (Solana/Base USDC); an fnet_ Forge key bypasses.",
       version: "1.0.0",
+      contact: { email: "foundrynet@proton.me" },
     },
     servers: [{ url: PUBLIC_URL }],
     paths: {
