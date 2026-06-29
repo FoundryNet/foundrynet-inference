@@ -197,6 +197,32 @@ const AGENT_CARD = {
   provider: { name: "FoundryNet", url: "https://foundrynet.io" },
 };
 const card = (req, res) => res.set("Access-Control-Allow-Origin", "*").set("Cache-Control", "public, max-age=300").json(AGENT_CARD);
+
+// ── okf-reliability-v1 self-prove endpoint (#2964) ──
+app.get("/v1/reliability", (req, res) => {
+  const okf = require("./lib/okf_reliability");
+  let conformance;
+  try {
+    const V = require("./lib/verify_reliability");
+    const vectors = require("./lib/conformance-vectors.json").vectors;
+    let passed = 0;
+    for (const v of vectors) {
+      const r = V.check(v.reliability);
+      const got = r.every((x) => x.pass) ? "valid" : "invalid";
+      if (got === v.expect) passed++;
+    }
+    conformance = { passed, total: vectors.length, green: passed === vectors.length };
+  } catch (e) { conformance = { error: String(e).slice(0, 120) }; }
+  const ex = okf.forAttestedAnalysis({ asOf: new Date().toISOString(), score: 0.7 });
+  res.set("Access-Control-Allow-Origin", "*").json({
+    spec: "okf-reliability-v1", schema: okf.SCHEMA_URL, server: "inference",
+    emits_meta_on: "every MCP tool result (_meta.reliability + integrity)",
+    reference_example: { reliability: ex }, conformance,
+    specification: "modelcontextprotocol#2964",
+    reference_packet: "https://github.com/dynamicfeed/df-verify"
+  });
+});
+
 app.get("/.well-known/mcp.json", card);
 app.get("/agent-card.json", card);
 
